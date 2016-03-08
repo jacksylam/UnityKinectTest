@@ -28,7 +28,7 @@ public class PlayerController : MonoBehaviour {
 	}
 	
 	// Update is called once per frame
-	void Update () {
+    void Update() {
         //float moveHorizontal = Input.GetAxis("Horizontal");
         // float moveVertical = Input.GetAxis("Vertical");
 
@@ -36,20 +36,17 @@ public class PlayerController : MonoBehaviour {
 
         Vector3 movement = Vector3.zero;
 
-             if (BodySourceManager == null)
-        {
+        if (BodySourceManager == null) {
             return;
         }
-        
+
         _BodyManager = BodySourceManager.GetComponent<BodySourceManager>();
-        if (_BodyManager == null)
-        {
+        if (_BodyManager == null) {
             return;
         }
-        
+
         Kinect.Body[] data = _BodyManager.GetData();
-        if (data == null)
-        {
+        if (data == null) {
             return;
         }
 
@@ -73,31 +70,59 @@ public class PlayerController : MonoBehaviour {
                 _Bodies.Remove(trackingId);
             }
         }
-        foreach (Kinect.Body body in data) {
 
+        int nearestBodyID = -1;
+        for (int i = 0; i < data.Length; i++ ) {
+            Kinect.Body body = data[i];
             if (body.IsTracked) {
-
-
-                Kinect.Joint rightHand = body.Joints[Kinect.JointType.HandRight];
-                Kinect.Joint leftHand = body.Joints[Kinect.JointType.HandLeft];
-
-                Kinect.Joint spineMid = body.Joints[Kinect.JointType.SpineMid];
-                Kinect.Joint spineBase = body.Joints[Kinect.JointType.SpineBase];
-
-                if (rightHand.Position.X > spineMid.Position.X) {
-                    movement = Vector3.right;
-                }
-                else if (rightHand.Position.X < spineMid.Position.X) {
-                    movement = Vector3.left;
+                if (nearestBodyID == -1) {
+                    nearestBodyID = i;
                 }
                 else {
-                    movement = Vector3.zero;
+                    Kinect.Joint head = body.Joints[Kinect.JointType.Head];
+                    if (head.Position.Z < data[nearestBodyID].Joints[Kinect.JointType.Head].Position.Z) {
+                        nearestBodyID = i;
+                    }
                 }
-            }
+            }       
+        }
+
+        //Debug.Log(nearestBodyID);
+
+        if (nearestBodyID == -1) {
+            return;
+        }
+        Kinect.Body _body = data[nearestBodyID];
+        Kinect.Joint rightHand = _body.Joints[Kinect.JointType.HandRight];
+        Kinect.Joint leftHand = _body.Joints[Kinect.JointType.HandLeft];
+
+        Kinect.Joint spineMid = _body.Joints[Kinect.JointType.SpineMid];
+        Kinect.Joint spineBase = _body.Joints[Kinect.JointType.SpineBase];
+
+        if (rightHand.Position.X > spineMid.Position.X) {
+            movement = Vector3.right;
+        }
+        else if (rightHand.Position.X < spineMid.Position.X) {
+            movement = Vector3.left;
+        }
+        else {
+            movement = Vector3.zero;
         }
 
         rb.AddForce(movement * speed);
-	}
+
+        if (leftHand.Position.Y > spineMid.Position.Y) {
+            movement = Vector3.forward;
+        }
+        else if (leftHand.Position.Y < spineMid.Position.Y) {
+            movement = Vector3.back;
+        }
+        else {
+            movement = Vector3.zero;
+        }
+
+        rb.AddForce(movement * speed);
+    }
 
     void FixedUpdate()
     {
